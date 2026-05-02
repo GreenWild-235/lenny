@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LENNY // MISSION 25</title>
+    <style>
+        :root { --gold: #d4af37; --ornn: #ff4500; --bg: #0a0a0c; --panel: rgba(20, 20, 25, 0.98); }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--bg); color: #e0e0e0; font-family: 'Segoe UI', Tahoma, sans-serif; overflow: hidden; }
+        #bg-canvas { position: fixed; inset: 0; z-index: 0; opacity: 0.3; }
+        #ui { position: relative; z-index: 10; display: flex; align-items: center; justify-content: center; height: 100%; }
+        .card { background: var(--panel); border: 1px solid var(--gold); padding: 30px; border-radius: 20px; width: 85%; max-width: 480px; text-align: center; box-shadow: 0 0 50px rgba(0,0,0,1); }
+        .prog-bar { width: 100%; height: 4px; background: #222; margin: 15px 0; border-radius: 2px; }
+        #fill { height: 100%; background: var(--gold); width: 0%; transition: 0.4s; }
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 20px 0; }
+        .cell { padding: 15px; border: 1px solid #444; cursor: pointer; border-radius: 10px; transition: 0.2s; font-size: 0.9rem; background: rgba(255,255,255,0.02); }
+        .cell:hover { border-color: var(--gold); background: rgba(212, 175, 55, 0.1); }
+        .active { background: var(--gold) !important; color: #000; font-weight: bold; }
+        button { background: var(--gold); color: #000; border: none; padding: 15px; border-radius: 12px; cursor: pointer; width: 100%; font-weight: bold; text-transform: uppercase; margin-top: 10px; }
+        .hidden { display: none; }
+        #msg { color: var(--ornn); font-size: 0.8rem; margin-top: 10px; min-height: 1.2rem; }
+    </style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<div id="ui">
+    <div id="scr-start" class="card">
+        <h1 style="color:var(--gold); letter-spacing: 2px;">PROJECT_LENNY.25</h1>
+        <p>Ein interaktives Protokoll von deiner besten Freundin und ihrem Freund.</p>
+        <button onclick="nextStep(0)">Sequenz starten</button>
+    </div>
+
+    <div id="scr-game" class="card hidden">
+        <div id="label" style="font-size: 0.7rem; color: var(--gold); letter-spacing: 2px;">STEP 01 / 20</div>
+        <div class="prog-bar"><div id="fill"></div></div>
+        <h3 id="question" style="min-height: 70px; font-weight: 400; line-height: 1.4;"></h3>
+        <div id="input-area"></div>
+        <div id="msg"></div>
+        <button id="main-btn" onclick="validate()">Bestätigen</button>
+    </div>
+
+    <div id="scr-final" class="card hidden">
+        <h1 style="color:var(--gold)">MISSION ERFÜLLT</h1>
+        <p>Happy Birthday, Lenny!</p>
+        <div style="border: 1px solid var(--ornn); padding: 20px; background: rgba(255,69,0,0.05); text-align: left; font-size: 0.9rem; line-height: 1.6;">
+            <b>DEIN GESCHENK:</b><br><br>
+            Wir zwei laden dich zu einem gemeinsamen Trip nach <b>Oberhausen</b> ein! <br><br>
+            Dort gehen wir zu <b>SANDBOX VR</b>. Das ist Full-Body-VR, wo wir uns als Team durch virtuelle Welten kämpfen.<br><br>
+            <b>Dein Job:</b> Such dir auf der Website ein Spiel aus, das wir drei zusammen rasiert werden, und wir finden gemeinsam ein Datum!
+        </div>
+        <button onclick="window.open('https://sandboxvr.com/oberhausen/games', '_blank')">GAMES ANSEHEN</button>
+    </div>
+</div>
+
+<script>
+let currentIdx = 0;
+let tempSelection = "";
+
+const steps = [
+    {q: "Wie alt wirst du heute offiziell?", type: "choice", data: ["24", "25", "Man ist nur so alt, wie man sich fühlt", "30"], a: "25"},
+    {q: "In welcher Stadt hat unser gemeinsames Studium 2020 angefangen?", type: "choice", data: ["Köln", "Düsseldorf", "Wuppertal", "Essen"], a: "Wuppertal"},
+    {q: "Welches Fach hast du damals dort studiert?", type: "choice", data: ["Sicherheitstechnik", "Mathe", "Physik", "Chemie"], a: "Sicherheitstechnik"},
+    {q: "Und was studierst du heute stattdessen?", type: "choice", data: ["Biologie", "Chemie", "Informatik", "Geschichte"], a: "Chemie"},
+    {q: "Wer denkst du, hat dieses Quiz heute für dich vorbereitet?", type: "choice", data: ["Nur irgendeine Freundin", "Der Freund eines Freundes", "Lisa & Daniel", "ChatGPT"], a: "Lisa & Daniel"},
+    {q: "Wenn wir drei was zocken, welches Spiel ist meistens am Start?", type: "choice", data: ["FIFA", "LoL", "Mario Kart", "Tetris"], a: "LoL"},
+    {q: "Welchen Champion spielst du dort am liebsten?", type: "choice", data: ["Yasuo", "Garen", "Ornn", "Teemo"], a: "Ornn"},
+    {q: "Auf welcher Lane 'lebst' du normalerweise?", type: "choice", data: ["Toplane", "Midlane", "Botlane", "Jungle"], a: "Toplane"},
+    {q: "Was ist Ornns größte Stärke auf der Lane?", type: "choice", data: ["Heilen", "Schmieden", "Fliegen", "Unsichtbarkeit"], a: "Schmieden"},
+    {q: "Wie viele Spieler sind in einem LoL-Team (inklusive dir)?", type: "choice", data: ["3", "4", "5", "6"], a: "5"},
+    {q: "Genug von LoL. Stell dir vor, du bist IM Spiel. Wie nennt man das?", type: "choice", data: ["HD TV", "Virtual Reality", "Gameboy", "Kino"], a: "Virtual Reality"},
+    {q: "In VR gibt es keine Tasten. Was benutzt du zum Zielen?", type: "choice", data: ["Deine Augen", "Deine Hände", "Deine Gedanken", "Eine Maus"], a: "Deine Hände"},
+    {q: "Wir wollen mit dir zu einem Ort, der dich anders fühlen lässt. Was könnte das sein?", type: "choice", data: ["Ein Spielplatz", "Ein VR-Erlebnis", "Ein Restaurant", "Ein Labor"], a: "Ein VR-Erlebnis"},
+    {q: "Dort trägt man Westen, die Vibrationen erzeugen. Was denkst du, spürt man dadurch?", type: "choice", data: ["Wind", "Treffer im Spiel", "Musik", "Nichts"], a: "Treffer im Spiel"},
+    {q: "Dieses Erlebnis liegt in einer Stadt mit einem sehr großen Einkaufszentrum (Centro).", type: "choice", data: ["Dortmund", "Oberhausen", "Berlin", "Hamburg"], a: "Oberhausen"},
+    {q: "Wer geht dort zusammen als Team hin?", type: "choice", data: ["Nur du und Malina", "Du und deine Oma", "Wir drei zusammen und bis zu drei andere", "Fremde"], a: "Wir drei zusammen und bis zu drei andere"},
+    {q: "In einem der Spiele kämpft man gegen Zombies. Hast du darauf Bock?", type: "choice", data: ["Ja!", "Definitiv Ja!", "Sowas von!", "GIB HER!"], a: "ANY"},
+    {q: "Man muss dort vorher einen Termin buchen. Sollen wir das bald machen?", type: "choice", data: ["Ja", "Nein", "Vielleicht", "Später"], a: "Ja"},
+    {q: "Darfst du dir auf der Website aussuchen, welches Spiel wir machen?", type: "choice", data: ["Ja, bitte!", "Nein", "Ihr entscheidet", "Egal"], a: "Ja, bitte!"},
+    {q: "Bist du bereit für die Auflösung?", type: "choice", data: ["START", "GO", "JETZT", "LEVEL UP"], a: "ANY"}
+];
+
+function nextStep(idx) {
+    document.getElementById('scr-start').classList.add('hidden');
+    document.getElementById('scr-game').classList.remove('hidden');
+    currentIdx = idx;
+    const step = steps[idx];
+    document.getElementById('label').innerText = `STEP ${String(idx+1).padStart(2, '0')} / 20`;
+    document.getElementById('fill').style.width = ((idx+1) / 20 * 100) + "%";
+    document.getElementById('question').innerText = step.q;
+    document.getElementById('msg').innerText = "";
+    
+    const container = document.getElementById('input-area');
+    container.innerHTML = "";
+    tempSelection = "";
+
+    const grid = document.createElement('div');
+    grid.className = "grid";
+    step.data.forEach(item => {
+        const cell = document.createElement('div');
+        cell.className = "cell";
+        cell.innerText = item;
+        cell.onclick = () => {
+            document.querySelectorAll('.cell').forEach(c => c.classList.remove('active'));
+            cell.classList.add('active');
+            tempSelection = item;
+        };
+        grid.appendChild(cell);
+    });
+    container.appendChild(grid);
+}
+
+function validate() {
+    const step = steps[currentIdx];
+    if (tempSelection === "") {
+        document.getElementById('msg').innerText = "BITTE WÄHLE EINE OPTION.";
+        return;
+    }
+
+    if (step.a === "ANY" || tempSelection === step.a) {
+        currentIdx++;
+        if(currentIdx < steps.length) nextStep(currentIdx);
+        else finish();
+    } else {
+        document.getElementById('msg').innerText = "VERSUCH ES NOCHMAL!";
+    }
+}
+
+function finish() {
+    document.getElementById('scr-game').classList.add('hidden');
+    document.getElementById('scr-final').classList.remove('hidden');
+}
+
+const canv = document.getElementById('bg-canvas');
+const ctx = canv.getContext('2d');
+canv.width = window.innerWidth; canv.height = window.innerHeight;
+function draw() {
+    ctx.fillStyle = "rgba(10, 10, 12, 0.15)";
+    ctx.fillRect(0,0,canv.width, canv.height);
+    ctx.fillStyle = "#d4af37";
+    ctx.beginPath(); ctx.arc(Math.random()*canv.width, Math.random()*canv.height, 1, 0, Math.PI*2); ctx.fill();
+    requestAnimationFrame(draw);
+}
+draw();
+</script>
+</body>
+</html>
